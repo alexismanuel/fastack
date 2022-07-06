@@ -1,3 +1,4 @@
+PWD=/home/alexismanuel/github/fastack
 NETWORK=localbound
 POSTGRES_IMAGE=postgres
 POSTGRES_PORT=5432
@@ -19,6 +20,7 @@ postgres: network
 	--publish $(POSTGRES_PORT):$(POSTGRES_PORT) \
 	--env POSTGRES_USER=$(POSTGRES_USER) \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
+	-v $(PWD)/postgres/scripts:/docker-entrypoint-initdb.d \
 	--name postgres \
 	$(POSTGRES_IMAGE)
 
@@ -39,3 +41,7 @@ psql:
 .PHONY: mongoshell
 mongoshell:
 	docker exec -it mongo mongo
+
+.PHONY: stop
+stop:
+	@ docker container kill postgres mongo || true
