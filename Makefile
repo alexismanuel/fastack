@@ -31,6 +31,8 @@ mongo: network
 	--publish $(MONGO_PORT):$(MONGO_PORT) \
 	--env MONGODB_INITDB_ROOT_USERNAME=$(MONGO_USER) \
 	--env MONGODB_INITDB_ROOT_PASSWORD=$(MONGO_PASSWORD) \
+	-v $(PWD)/mongo/data:/data/db \
+	-v $(PWD)/mongo/scripts:/docker-entrypoint-initdb.d \
 	--name mongo \
 	$(MONGO_IMAGE)
 
