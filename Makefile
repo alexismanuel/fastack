@@ -80,6 +80,12 @@ psql:
 mongoshell:
 	docker exec -it mongo mongo
 
+.PHONY: airbyte
+airbyte:
+	cd airbyte && docker-compose up -d
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon || true
+	cd airbyte && docker-compose down
+	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
