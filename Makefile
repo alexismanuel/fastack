@@ -3,6 +3,10 @@ POSTGRES_IMAGE=postgres
 POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
+MONGO_IMAGE=mongo:latest
+MONGO_PORT=27017
+MONGO_USER=mongo
+MONGO_PASSWORD=mongo
 
 .PHONY: network
 network:
@@ -18,6 +22,20 @@ postgres: network
 	--name postgres \
 	$(POSTGRES_IMAGE)
 
+.PHONY: mongo
+mongo: network
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--publish $(MONGO_PORT):$(MONGO_PORT) \
+	--env MONGODB_INITDB_ROOT_USERNAME=$(MONGO_USER) \
+	--env MONGODB_INITDB_ROOT_PASSWORD=$(MONGO_PASSWORD) \
+	--name mongo \
+	$(MONGO_IMAGE)
+
 .PHONY: psql
 psql:
 	PGPASSWORD=$(POSTGRES_PASSWORD) psql -h localhost -U $(POSTGRES_USER) -p $(POSTGRES_PORT) -d postgres
+
+.PHONY: mongoshell
+mongoshell:
+	docker exec -it mongo mongo
