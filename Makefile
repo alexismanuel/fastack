@@ -8,6 +8,9 @@ MONGO_IMAGE=mongo:latest
 MONGO_PORT=27017
 MONGO_USER=mongo
 MONGO_PASSWORD=mongo
+DAGSTER_PORT=3000
+DAGSTER_IMAGE_TAG=localhost/dagster
+DAGSTER_HOME=/opt/dagster/dagster_home/
 
 .PHONY: network
 network:
@@ -36,6 +39,25 @@ mongo: network
 	--name mongo \
 	$(MONGO_IMAGE)
 
+.PHONY: build-dagster
+build-dagster:
+	@ docker build \
+	--tag $(DAGSTER_IMAGE_TAG) \
+	./dagster
+
+.PHONY: dagster-ui
+dagster-ui: postgres build-dagster
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--publish $(DAGSTER_PORT):$(DAGSTER_PORT) \
+	--env DAGSTER_HOME=$(DAGSTER_HOME) \
+	--env INSTANCE_USERNAME=$(POSTGRES_USER) \
+	--env INSTANCE_PASSWORD=$(POSTGRES_PASSWORD) \
+	--env INSTANCE_HOSTNAME=postgres \
+	--env DAGSTER_DB_NAME=dagster \
+	--name dagster-ui \
+	$(DAGSTER_IMAGE_TAG) dagit -h 0.0.0.0 -p $(DAGSTER_PORT)
+
 .PHONY: psql
 psql:
 	PGPASSWORD=$(POSTGRES_PASSWORD) psql -h localhost -U $(POSTGRES_USER) -p $(POSTGRES_PORT) -d postgres
@@ -46,4 +68,4 @@ mongoshell:
 
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo || true
+	@ docker container kill postgres mongo dagster-ui || true
