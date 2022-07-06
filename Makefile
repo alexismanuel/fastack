@@ -18,6 +18,7 @@ network:
 
 .PHONY: postgres
 postgres: network
+ifeq ($(shell docker images -q postgres 2> /dev/null),)
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--publish $(POSTGRES_PORT):$(POSTGRES_PORT) \
@@ -26,6 +27,7 @@ postgres: network
 	-v $(PWD)/postgres/scripts:/docker-entrypoint-initdb.d \
 	--name postgres \
 	$(POSTGRES_IMAGE)
+endif
 
 .PHONY: mongo
 mongo: network
@@ -57,6 +59,18 @@ dagster-ui: postgres build-dagster
 	--env DAGSTER_DB_NAME=dagster \
 	--name dagster-ui \
 	$(DAGSTER_IMAGE_TAG) dagit -h 0.0.0.0 -p $(DAGSTER_PORT)
+
+.PHONY: dagster-daemon
+dagster-daemon: postgres build-dagster
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--env DAGSTER_HOME=$(DAGSTER_HOME) \
+	--env INSTANCE_USERNAME=$(POSTGRES_USER) \
+	--env INSTANCE_PASSWORD=$(POSTGRES_PASSWORD) \
+	--env INSTANCE_HOSTNAME=postgres \
+	--env DAGSTER_DB_NAME=dagster \
+	--name dagster-daemon \
+	$(DAGSTER_IMAGE_TAG) dagster-daemon run
 
 .PHONY: psql
 psql:
