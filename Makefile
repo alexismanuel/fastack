@@ -11,6 +11,7 @@ MONGO_PASSWORD=mongo
 DAGSTER_PORT=3000
 DAGSTER_IMAGE_TAG=localhost/dagster
 DAGSTER_HOME=/opt/dagster/dagster_home/
+DBT_IMAGE_TAG=localhost/dbt
 
 .PHONY: network
 network:
@@ -84,8 +85,27 @@ mongoshell:
 airbyte:
 	cd airbyte && docker-compose up -d
 
+.PHONY: build-dbt
+build-dbt:
+	@ docker build \
+	--tag $(DBT_IMAGE_TAG) \
+	./dbt
+
+.PHONY: dbt
+dbt: network build-dbt
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--name dbt \
+	--env DBT_HOST=postgres \
+	--env DBT_USERNAME=$(POSTGRES_USER) \
+	--env DBT_PASSWORD=$(POSTGRES_PASSWORD) \
+	--env DBT_DBNAME=postgres \
+	--env DBT_SCHEMA=cd \
+	--env DBT_PROFILES_DIR=/home/src/dbt \
+	$(DBT_IMAGE_TAG) bash
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
