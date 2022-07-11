@@ -24,7 +24,6 @@ network:
 
 .PHONY: postgres
 postgres: network
-ifeq ($(shell docker images -q postgres 2> /dev/null),)
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--publish $(POSTGRES_PORT):$(POSTGRES_PORT) \
@@ -33,7 +32,6 @@ ifeq ($(shell docker images -q postgres 2> /dev/null),)
 	-v $(PWD)/postgres/scripts:/docker-entrypoint-initdb.d \
 	--name postgres \
 	$(POSTGRES_IMAGE)
-endif
 
 .PHONY: mongo
 mongo: network
@@ -54,7 +52,7 @@ build-dagster:
 	./dagster
 
 .PHONY: dagster-ui
-dagster-ui: postgres build-dagster
+dagster-ui: build-dagster
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--publish $(DAGSTER_PORT):$(DAGSTER_PORT) \
@@ -67,7 +65,7 @@ dagster-ui: postgres build-dagster
 	$(DAGSTER_IMAGE_TAG) dagit -h 0.0.0.0 -p $(DAGSTER_PORT)
 
 .PHONY: dagster-daemon
-dagster-daemon: postgres build-dagster
+dagster-daemon: build-dagster
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--env DAGSTER_HOME=$(DAGSTER_HOME) \
@@ -112,6 +110,7 @@ dbt: network build-dbt
 .PHONY: jupyterhub
 jupyterhub: network
 	@ docker run -it --rm -d \
+	--network $(NETWORK) \
 	--name jupyterhub \
 	-p $(JUPYTERHUB_PORT):$(JUPYTERHUB_PORT) \
 	-v $(PWD)/jupyterhub:/home/$(JUPYTERHUB_USER) \
@@ -125,8 +124,15 @@ jupyterhub: network
 
 .PHONY: metabase
 metabase: network
-	@ docker run -it --rm -d \
+	@ docker run -it --rm \
+	--network $(NETWORK) \
 	--name metabase \
+	--env MB_DB_TYPE=postgres \
+	--env MB_DB_DBNAME=metabase \
+	--env MB_DB_PORT=$(POSTGRES_PORT) \
+	--env MB_DB_USER=$(POSTGRES_USER) \
+	--env MB_DB_PASS=$(POSTGRES_PASSWORD) \
+	--env MB_DB_HOST=postgres \
 	-p $(METABASE_PORT):3000 \
 	$(METABASE_IMAGE_TAG)
 
