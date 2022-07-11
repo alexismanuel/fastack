@@ -15,6 +15,8 @@ DBT_IMAGE_TAG=localhost/dbt
 JUPYTERHUB_IMAGE_TAG=jupyter/minimal-notebook:4d9c9bd9ced0
 JUPYTERHUB_PORT=8888
 JUPYTERHUB_USER=alexismanuel
+METABASE_PORT=12345
+METABASE_IMAGE_TAG=metabase/metabase
 
 .PHONY: network
 network:
@@ -109,20 +111,27 @@ dbt: network build-dbt
 
 .PHONY: jupyterhub
 jupyterhub: network
-	@ docker run -it --rm \
+	@ docker run -it --rm -d \
 	--name jupyterhub \
 	-p $(JUPYTERHUB_PORT):$(JUPYTERHUB_PORT) \
 	-v $(PWD)/jupyterhub:/home/$(JUPYTERHUB_USER) \
 	-w /home/$(JUPYTERHUB_USER)/ \
+	--user root \
 	--env NB_USER=$(JUPYTERHUB_USER) \
 	--env NB_UID="1000" \
-	--user root \
 	--env CHOWN_HOME=yes \
 	--env CHOWN_HOME_OPTS='-R' \
 	$(JUPYTERHUB_IMAGE_TAG)
 
+.PHONY: metabase
+metabase: network
+	@ docker run -it --rm -d \
+	--name metabase \
+	-p $(METABASE_PORT):3000 \
+	$(METABASE_IMAGE_TAG)
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
