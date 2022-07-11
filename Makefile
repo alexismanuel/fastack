@@ -12,6 +12,9 @@ DAGSTER_PORT=3000
 DAGSTER_IMAGE_TAG=localhost/dagster
 DAGSTER_HOME=/opt/dagster/dagster_home/
 DBT_IMAGE_TAG=localhost/dbt
+JUPYTERHUB_IMAGE_TAG=jupyter/minimal-notebook:4d9c9bd9ced0
+JUPYTERHUB_PORT=8888
+JUPYTERHUB_USER=alexismanuel
 
 .PHONY: network
 network:
@@ -104,8 +107,22 @@ dbt: network build-dbt
 	--env DBT_PROFILES_DIR=/home/src/dbt \
 	$(DBT_IMAGE_TAG) bash
 
+.PHONY: jupyterhub
+jupyterhub: network
+	@ docker run -it --rm \
+	--name jupyterhub \
+	-p $(JUPYTERHUB_PORT):$(JUPYTERHUB_PORT) \
+	-v $(PWD)/jupyterhub:/home/$(JUPYTERHUB_USER) \
+	-w /home/$(JUPYTERHUB_USER)/ \
+	--env NB_USER=$(JUPYTERHUB_USER) \
+	--env NB_UID="1000" \
+	--user root \
+	--env CHOWN_HOME=yes \
+	--env CHOWN_HOME_OPTS='-R' \
+	$(JUPYTERHUB_IMAGE_TAG)
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
