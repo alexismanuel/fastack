@@ -148,8 +148,17 @@ redpanda: network
 	$(REDPANDA_IMAGE_TAG) \
 	redpanda start $(REDPANDA_START_ARGS)
 
+.PHONY: materialize
+materialize: network
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--name materialize \
+	-p 6875:6875 \
+	materialize/materialized:v0.26.4 \
+	--workers 1
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda materialize || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
