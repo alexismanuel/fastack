@@ -17,6 +17,9 @@ JUPYTERHUB_PORT=8888
 JUPYTERHUB_USER=alexismanuel
 METABASE_PORT=12345
 METABASE_IMAGE_TAG=metabase/metabase
+REDPANDA_IMAGE_TAG=docker.redpanda.com/vectorized/redpanda:latest
+REDPANDA_PORTS=8081:8081 -p 8082:8082 -p 9092:9092 -p 9644:9644
+REDPANDA_START_ARGS=--overprovisioned --smp 1  --memory 1G --reserve-memory 0M --node-id 0 --check=false
 
 .PHONY: network
 network:
@@ -103,7 +106,7 @@ dbt: network build-dbt
 	--env DBT_USERNAME=$(POSTGRES_USER) \
 	--env DBT_PASSWORD=$(POSTGRES_PASSWORD) \
 	--env DBT_DBNAME=postgres \
-	--env DBT_SCHEMA=cd \
+	--env DBT_SCHEMA=postgres \
 	--env DBT_PROFILES_DIR=/home/src/dbt \
 	$(DBT_IMAGE_TAG) bash
 
@@ -124,7 +127,7 @@ jupyterhub: network
 
 .PHONY: metabase
 metabase: network
-	@ docker run -it --rm \
+	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--name metabase \
 	--env MB_DB_TYPE=postgres \
@@ -136,8 +139,17 @@ metabase: network
 	-p $(METABASE_PORT):3000 \
 	$(METABASE_IMAGE_TAG)
 
+.PHONY: redpanda
+redpanda: network
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--name redpanda \
+	-p $(REDPANDA_PORTS) \
+	$(REDPANDA_IMAGE_TAG) \
+	redpanda start $(REDPANDA_START_ARGS)
+
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
