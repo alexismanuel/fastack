@@ -24,6 +24,8 @@ MATERIALIZE_IMAGE_TAG=materialize/materialized:v0.26.4
 MATERIALIZE_PORT=6875
 STREAMLIT_IMAGE_TAG=tomerlevi/streamlit-docker
 STREAMLIT_PORT=8501
+SUPERSET_IMAGE_TAG=apache/superset
+SUPERSET_PORT=8080
 
 .PHONY: network
 network:
@@ -165,11 +167,31 @@ streamlit: network
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--name streamlit \
-	-p $(METABASE_PORT):$(METABASE_PORT) \
+	-p $(STREAMLIT_PORT):$(STREAMLIT_PORT) \
 	$(STREAMLIT_IMAGE_TAG) /examples/intro.py
+
+.PHONY: superset
+superset: network
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--name superset \
+	-p $(SUPERSET_PORT):8088 \
+	$(SUPERSET_IMAGE_TAG)
+
+.PHONY: supersetup
+supersetup: network
+	@ docker exec -it superset superset fab create-admin \
+	--username admin \
+	--firstname Superset \
+	--lastname Admin \
+	--email admin@superset.com \
+	--password admin
+	@ docker exec -it superset superset db upgrade
+	@ docker exec -it superset superset load_examples
+	@ docker exec -it superset superset init
 
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda materialize streamlit || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda materialize streamlit superset || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
