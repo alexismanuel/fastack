@@ -20,6 +20,10 @@ METABASE_IMAGE_TAG=metabase/metabase
 REDPANDA_IMAGE_TAG=docker.redpanda.com/vectorized/redpanda:latest
 REDPANDA_PORTS=8081:8081 -p 8082:8082 -p 9092:9092 -p 9644:9644
 REDPANDA_START_ARGS=--overprovisioned --smp 1  --memory 1G --reserve-memory 0M --node-id 0 --check=false
+MATERIALIZE_IMAGE_TAG=materialize/materialized:v0.26.4
+MATERIALIZE_PORT=6875
+STREAMLIT_IMAGE_TAG=tomerlevi/streamlit-docker
+STREAMLIT_PORT=8501
 
 .PHONY: network
 network:
@@ -153,12 +157,19 @@ materialize: network
 	@ docker run -it --rm -d \
 	--network $(NETWORK) \
 	--name materialize \
-	-p 6875:6875 \
-	materialize/materialized:v0.26.4 \
-	--workers 1
+	-p $(MATERIALIZE_PORT):$(MATERIALIZE_PORT) \
+	$(MATERIALIZE_IMAGE_TAG) --workers 1
+
+.PHONY: streamlit
+streamlit: network
+	@ docker run -it --rm -d \
+	--network $(NETWORK) \
+	--name streamlit \
+	-p $(METABASE_PORT):$(METABASE_PORT) \
+	$(STREAMLIT_IMAGE_TAG) /examples/intro.py
 
 .PHONY: stop
 stop:
-	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda materialize || true
+	@ docker container kill postgres mongo dagster-ui dagster-daemon dbt jupyterhub metabase redpanda materialize streamlit || true
 	cd airbyte && docker-compose down
 	@ docker container kill airbyte-worker airbyte-server airbyte-webapp airbyte-db
