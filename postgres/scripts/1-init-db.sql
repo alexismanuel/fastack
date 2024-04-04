@@ -1,2 +1,0 @@
-CREATE DATABASE dagster;
-CREATE DATABASE metabase;
