@@ -1,7 +1,0 @@
-name : "mongo"
-mode: "docker"
-config:
-  image_name: "mongo"
-  container_port: 8080
-  host_port: 8080
-  app_name: "mongo-go-cli"

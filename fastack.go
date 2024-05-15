@@ -47,9 +47,8 @@ func main() {
 		return
 	}
 
-	fileLocation := fmt.Sprintf("%s/%s.yml", stackFolder, *stackName)
+	fileLocation := fmt.Sprintf("%s/%s/stack.yml", stackFolder, *stackName)
 	filename, _ := filepath.Abs(fileLocation)
-	fmt.Println(filename)
 	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -60,7 +59,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(stackConfig)
 
 	switch stackConfig.Mode {
 	case "docker":
