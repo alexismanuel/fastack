@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,7 +25,7 @@ type StackConfig struct {
 	} `yaml:"config"`
 }
 
-func RunDocker(stackConfig StackConfig) {
+func RunDocker(stackConfig StackConfig, envValues []string) {
 	ctx := context.Background()
 	d := docker.New(ctx)
 	msg := fmt.Sprintf("Now runnning %s", stackConfig.Name)
@@ -34,7 +35,37 @@ func RunDocker(stackConfig StackConfig) {
 		stackConfig.Config.ExposedPort,
 		stackConfig.Config.HostPort,
 		stackConfig.Config.AppName,
+		envValues,
 	)
+}
+
+func LoadEnv(stackName *string) []string {
+	envFileLocation := fmt.Sprintf("%s/%s/.env", stackFolder, *stackName)
+	envFilename, _ := filepath.Abs(envFileLocation)
+	var envFile map[string]string
+	envFile, err := godotenv.Read(envFilename)
+	if err != nil {
+		fmt.Println("No local .env file configured")
+		return []string{}
+	}
+	env := []string{}
+	for key, value := range envFile {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+	return env
+}
+
+func LoadStackConfig(stackName *string) StackConfig {
+	stackFileLocation := fmt.Sprintf("%s/%s/stack.yml", stackFolder, *stackName)
+	stackFilename, _ := filepath.Abs(stackFileLocation)
+	yamlFile, err := os.ReadFile(stackFilename)
+	var stackConfig StackConfig
+	err = yaml.Unmarshal(yamlFile, &stackConfig)
+
+	if err != nil {
+		panic(err)
+	}
+	return stackConfig
 }
 
 func main() {
@@ -47,22 +78,12 @@ func main() {
 		return
 	}
 
-	fileLocation := fmt.Sprintf("%s/%s/stack.yml", stackFolder, *stackName)
-	filename, _ := filepath.Abs(fileLocation)
-	yamlFile, err := os.ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	var stackConfig StackConfig
-	err = yaml.Unmarshal(yamlFile, &stackConfig)
-
-	if err != nil {
-		panic(err)
-	}
+	envValues := LoadEnv(stackName)
+	stackConfig := LoadStackConfig(stackName)
 
 	switch stackConfig.Mode {
 	case "docker":
-		RunDocker(stackConfig)
+		RunDocker(stackConfig, envValues)
 	default:
 		msg := fmt.Sprintf("Unknown mode found: %s", stackConfig.Mode)
 		fmt.Println(msg)

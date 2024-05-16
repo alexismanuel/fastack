@@ -1,0 +1,7 @@
+name: postgres
+mode: docker
+config:
+  image_name: postgres
+  container_port: 5432
+  host_port: 5432
+  app_name: postgres-local

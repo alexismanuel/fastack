@@ -35,10 +35,12 @@ func (d *DockerStack) GetClient() (*client.Client, error) {
 func (d DockerStack) GetContainerConfig(
 	imageName string,
 	exposedPort string,
+	envValues []string,
 ) *container.Config {
 	config := container.Config{
 		Image:        imageName,
 		ExposedPorts: nat.PortSet{nat.Port(exposedPort): struct{}{}},
+		Env:          envValues,
 	}
 	return &config
 }
@@ -57,9 +59,10 @@ func (d DockerStack) CreateAndRun(
 	exposedPort string,
 	hostPort string,
 	appName string,
+	envValues []string,
 ) {
 
-	containerConfig := d.GetContainerConfig(imageName, exposedPort)
+	containerConfig := d.GetContainerConfig(imageName, exposedPort, envValues)
 	hostConfig := d.GetHostConfig(hostPort)
 
 	resp, err := d.cli.ContainerCreate(
